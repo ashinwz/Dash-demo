@@ -8,6 +8,7 @@ import dash_core_components as dcc
 from dash.dependencies import Input, Output, ClientsideFunction, State
 import dash_bootstrap_components as dbc
 import plotly.express as px
+import dash_table
 import config
 from sqlalchemy import create_engine
 import pandas as pd
@@ -87,7 +88,36 @@ app.layout = html.Div(
                 dbc.Row(
                     [
                         dbc.Col(
-                            id='query-result'
+                            [
+                                dash_table.DataTable(
+                                    id='query-result',
+                                    virtualization=True,
+                                    editable=True,
+                                    page_size=15,
+                                    style_filter={
+                                        'font-family': 'Times New Romer',
+                                        'background-color': '#e3f2fd'
+                                    },
+                                    style_header={
+                                        'font-family': 'Times New Romer',
+                                        'font-weight': 'bold',
+                                        'text-align': 'center'
+                                    },
+                                    style_data={
+                                        'font-family': 'Times New Romer',
+                                        'text-align': 'center'
+                                    },
+                                    style_data_conditional=[
+                                        {
+                                            "if": {"state": "selected"},
+                                            "background-color": "#b3e5fc",
+                                            "border": "none"
+                                        },
+                                    ],
+                                    filter_action="native",
+                                    sort_action='native'
+                                )
+                            ]
                         )
                     ]
                 )
@@ -129,7 +159,8 @@ def refresh_table_names(n_clicks):
             return [{'label': '', 'value': ''}], 'No data'
 
 @app.callback(
-    Output('query-result', 'children'),
+    Output('query-result', 'data'),
+    Output('query-result', 'columns'),
     Input('query', 'n_clicks'),
     State('db-table-names', 'value'),
     prevent_initial_call=True
@@ -139,7 +170,11 @@ def query_data_records(n_clicks, value):
         # Retrive the data limit to 500 rows
         query_result = pd.read_sql_query(f'select * from {value} limit 500', con=engine)
         #print(query_result)
-        return html.Div(dbc.Table.from_dataframe(query_result, striped=True), style={'height': '600px', 'overflow': 'auto'})
+        #return html.Div(dbc.Table.from_dataframe(query_result, striped=True), style={'height': '600px', 'overflow': 'auto'})
+        return query_result.to_dict('records'), [
+            {'name': column, 'id': column}
+            for column in query_result.columns
+        ]
     else:
         return dash.no_update
 
